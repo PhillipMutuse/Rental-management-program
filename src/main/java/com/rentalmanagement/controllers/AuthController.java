@@ -1,9 +1,14 @@
 package com.rentalmanagement.controllers;
 
+import com.rentalmanagement.config.JwtConfig;
 import com.rentalmanagement.entities.User;
 import com.rentalmanagement.services.AuthenticationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -11,6 +16,12 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
     @Autowired
     private AuthenticationService authenticationService;
+
+    @Autowired
+    private JwtConfig jwtConfig;
+
+    @Autowired
+    private AuthenticationManager authenticationManager;
 
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody User user) {
@@ -20,7 +31,18 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody User user) {
-        // TODO: Implement login logic with JWT token generation
-        return ResponseEntity.ok("Login successful");
+        Authentication authentication = authenticationManager.authenticate(
+            new UsernamePasswordAuthenticationToken(
+                user.getUsername(),
+                user.getPassword()
+            )
+        );
+
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+        String jwt = jwtConfig.generateToken(authentication.getName());
+
+        return ResponseEntity.ok(new AuthResponse(jwt));
     }
+
+    private record AuthResponse(String token) {}
 }
